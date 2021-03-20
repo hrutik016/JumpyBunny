@@ -8,30 +8,54 @@ public class PlayerController : MonoBehaviour
     public float thrust = 10.0f;
     public LayerMask groundLayerMask;
     public Animator animator;
-    public float runSpeed = 1.5f;
+    public float runSpeed = 3.0f;
+    private static PlayerController sharedInstance;
 
+    private Vector3 initialPosition;
+    private Vector2 initialVelocity;
+
+    private void Awake()
+    {
+        sharedInstance = this;
+        initialPosition = transform.position;
+        rigidBody = GetComponent<Rigidbody2D>();
+        initialVelocity = rigidBody.velocity;
+        animator.SetBool("isAlive", true);
+    }
+
+    public static PlayerController GetInstance()
+    {
+        return sharedInstance;
+    }
 
     // Start is called before the first frame update
-    void Start()
+    public void StartGame()
     {
-        rigidBody = GetComponent<Rigidbody2D>();
         animator.SetBool("isAlive", true);
+        transform.position = initialPosition;
+        rigidBody.velocity = initialVelocity;
+        //GameManager.GetInstance();
     }
 
     private void FixedUpdate()
     {
-        if(rigidBody.velocity.x < runSpeed)
+        GameState currState = GameManager.GetInstance().currentGameState;
+        if (currState == GameState.InGame)
         {
-            rigidBody.velocity = new Vector2(runSpeed,rigidBody.velocity.y);
+            if (rigidBody.velocity.x < runSpeed)
+            {
+                rigidBody.velocity = new Vector2(runSpeed, rigidBody.velocity.y);
+            }
         }
     }
 
     // Update is called once per frame
     void Update()
     {
+        bool canJump = GameManager.GetInstance().currentGameState == GameState.InGame;
         bool isOnTheGround = IsOnTheGround();
         animator.SetBool("isGrounded", isOnTheGround);
-        if (Input.GetMouseButtonDown(0) && isOnTheGround)
+        if (canJump && (Input.GetMouseButtonDown(0)) && isOnTheGround)
         {
             Jump();
         }
@@ -45,5 +69,11 @@ public class PlayerController : MonoBehaviour
     bool IsOnTheGround()
     {
         return Physics2D.Raycast(transform.position, Vector2.down, 1.0f, groundLayerMask.value);
+    }
+
+    public void KillPlayer()
+    {
+        animator.SetBool("isAlive", false);
+        GameManager.GetInstance().GameOver();
     }
 }
